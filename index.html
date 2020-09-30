@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+   <head>
+      <title>Board Game Hub</title>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <style>
+      /* Style the body */
+      body {
+        font-family: Arial;
+        margin: 0;
+      }
+      /* Header/Logo Title */
+      .header {
+        padding: 60px;
+        text-align: center;
+        background: #3399ff;
+        color: white;
+        font-size: 30px;
+      }
+
+      /* Page Content */
+      .content {padding:20px;}
+      </style>
+   </head>
+   <canvas id="myCanvas" ></canvas>
+   <script src = "/socket.io/socket.io.js"></script>
+
+   <script>
+   var socket = io();
+   var user;
+   var roomCode;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//FUNCTIONS TO HELP WITH VARIOUS TASKS ------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+//sending and setting inforamtion functions--------------------------------------
+
+function sendUser(){
+  console.log('inside of send user');
+  user = document.getElementById('un').value;
+  var div = document.getElementById('codeContainer');
+  div.style.display= 'block';
+};
+
+function roomComplete(){
+    socket.emit('roomComplete',roomCode);
+    var selDiv = document.getElementById('gameSelectorContatiner');
+    var roomDiv = document.getElementById('roomSetupContainer');
+    var head = document.getElementById('subHead');
+    selDiv.style.display = 'block';
+    roomDiv.style.display = 'none';
+    head.innerHTML = 'Choose your game!'
+}
+
+
+//eliminating repetitve code functions-------------------------------------------
+function showPregameRoom(){
+
+  var userDiv = document.getElementById('EnterUserContainer');
+  var codeDiv = document.getElementById('codeContainer');
+  var roomDiv = document.getElementById('roomSetupContainer');
+  var head = document.getElementById('subHead');
+
+  userDiv.style.display='none';
+  codeDiv.style.display='none';
+  roomDiv.style.display='block';
+  head.innerHTML = 'Welcome to your room! Room code is: ' + roomCode
+}
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//FUNCTIONS TO SEND INFO TO THE SERVER-------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////////////////////////
+   function sendCode(){
+     roomCode = document.getElementById('InputCode').value
+     roomCode = roomCode.toUpperCase();
+     socket.emit('sendCode', roomCode,user);
+   }
+
+   function createCode(){
+     socket.emit('createCode',user);
+   }
+
+
+
+
+   //BEGIN GAMES FUNCTIONS------------------------------------------------
+   ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////OTRIO GAME////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------------------------------
+   function playOtrio(){
+     console.log('inside play Otrio client side');
+     socket.emit('playOtrio',roomCode);
+     var screen1 = document.getElementById('screen1');
+     screen1.style.display = 'none';
+
+     var canvas = document.getElementById("myCanvas"); //creates a reference to the canvas object
+     var ctx = canvas.getContext("2d"); //stores the tool used to draw on the canvas
+     LoadFunction();
+
+     //draws a red square - coordinates are based in 4th quadrant
+     ctx.beginPath();
+     ctx.rect(20, 40, 50, 50); // - (top left coordinates,,width,height)
+     ctx.fillStyle = "#FF0000"; //stpres the color
+     ctx.fill();
+     ctx.closePath();
+
+     //draw the main otrio Board
+     
+
+
+
+     //draw is going to be the redrawing of the different pieces over and over again
+     function draw() {
+         ctx.clearRect(0, 0, canvas.width, canvas.height);
+         //draws a red square - coordinates are based in 4th quadrant
+         ctx.beginPath();
+         ctx.rect(20, 40, 50, 50); // - (top left coordinates,,width,height)
+         ctx.fillStyle = "#FF0000"; //stpres the color
+         ctx.fill();
+         ctx.closePath();
+
+     }
+     setInterval(draw, 10);
+
+
+     function LoadFunction(){
+       console.log("device Pixel ratio is:"+window.devicePixelRatio )
+       console.log("width" + screen.width)
+       console.log("height"+screen.height)
+       console.log("inner width " + window.innerWidth)
+       console.log("inner height "+ window.innerHeight)
+
+       document.getElementById("myCanvas").width = window.innerWidth;
+       document.getElementById("myCanvas").height = window.innerHeight;
+
+
+    }}
+//////////////////////////////END OF OTRIO FUNCTION//////////////////////////////////////////////////
+   function playAcquire(){
+     console.log("inside of Acquire function");
+     //add the correct code to play acquire
+    }
+
+   function playCoup(){
+     console.log("inside of coup function");
+     //add the correct code to play coup
+   }
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//SOCKET EVENTS LISTENING FROM MESSAGES FROM SERVER------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+//when the room exists and is found//*******************************************
+socket.on('roomFound',function(msg,listUsers){
+       document.getElementById('result').innerHTML = msg;
+       var div = document.getElementById('roomSetupContainer');
+       div.style.diplay='block'
+
+       //add all the current players in the room
+       console.log('the list of users: ' + listUsers)
+       listUsers.forEach((item, i) => {
+           var node = document.createElement("LI");
+           var textnode = document.createTextNode(item);
+           node.appendChild(textnode);
+           document.getElementById("playerList").appendChild(node);
+
+       });
+       showPregameRoom();
+});
+
+//when the room does not exists and is not found//******************************
+socket.on('roomNotFound',function(data){
+      document.getElementById('result').innerHTML = data;
+      console.log('Room not found client side');
+});
+
+//when the room is created and the user is added to it//************************
+socket.on('roomCreated',function(outCode){
+    document.getElementById('result').innerHTML = 'Your room was created successfully! Room code:'+ outCode;
+    console.log("current room code is:"+outCode);
+    roomCode = outCode
+
+    //change the page
+    var node = document.createElement("LI");
+    var textnode = document.createTextNode(user);
+    node.appendChild(textnode);
+    document.getElementById("playerList").appendChild(node);
+    showPregameRoom();
+});
+
+//when another user is added to the room//**************************************
+socket.on('userAddedToRoom',function(AddedUser){
+
+  var node = document.createElement("LI");
+  var textnode = document.createTextNode(AddedUser);
+  node.appendChild(textnode);
+  document.getElementById("playerList").appendChild(node);
+});
+
+socket.on('BeginSelectingGame',function(){
+  roomComplete();
+})
+
+
+
+
+
+
+   </script>
+
+   <body>
+     <div id='screen1'>
+     <div class="header">
+       <h1>Welcome to the Board Game Hub!</h1>
+       <p>One place to play all your favorite board games with friends</p>
+     </div>
+
+     <div class="content">
+           <h1 id='subHead'>Play a Game</h1>
+           <div id = 'EnterUserContainer'>
+                 <p> Enter the username that you would like to use for your gaming session today. This is the name that everyone
+                     will see during your games </p>
+                 <input id='un' type = 'text' name='un' value="" placeholder = 'Enter username here!'>
+                 <button type='button' name="sendUser" onclick="sendUser()"> Enter Username </button>
+           </div>
+
+
+           <div id='codeContainer' style='display:none' >
+                 <p> Already have a room code? Enter your room code below </p>
+                     <input id = "InputCode" type = "text" name = "InputCode" value = ""
+                        placeholder = "Enter room code here!">
+                     <button type = "button" name = "sendCode" onclick = "sendCode()">
+                        Enter Room Code
+                     </button>
+
+                  <p> Want to Create a new room? Click the button below to create a room! </p>
+                      <button type = "button" name = "CreateCode" onclick = "createCode()">
+                         Create room
+                      </button>
+           </div>
+           <div id='roomSetupContainer' style='display:none'>
+                  <p> Share this code with other members of your party so they can join this room as well!
+                  <h2> Here is the list of players currently in your room: <h2>
+                  <ul id='playerList'>
+                  </ul>
+
+
+                  <button type = "button" name = "RoomComplete" onclick = "roomComplete()">
+                  Start playing Games!
+                  </button>
+          </div>
+
+          <div id='gameSelectorContatiner' style='display:none'>
+          <h2> Just click on the game that you and your friends would like to play. <h2>
+          <br>
+          <h3> Otrio <h3> <button type='button' name = 'otrioButton' onclick ='playOtrio()'> Play Otrio </button>
+          <br><br>
+          <h3> Acquire <h3> <button type='button' name = 'acquireButton' onclick ='playAcquire()'> Play Acquire </button>
+          <br><br>
+          <h3> Coup <h3> <button type='button' name = 'coupButton' onclick ='playCoup()'> Play Coup </button>
+
+
+          </div>
+
+
+
+
+
+        </div>
+
+
+
+     <p id="result"> This shows the result of the function <p>
+    </div>
+   </body>
+</html>
